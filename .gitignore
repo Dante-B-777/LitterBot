@@ -1,0 +1,41 @@
+# Build artifacts
+Debug/
+Release/
+Build/
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.su
+*.a
+*.exe
+
+# IDE state
+.settings/
+.metadata/
+*.launch
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# ML weights
+*.pt
+
+# ROS 2
+build/
+install/
+log/
+
+# Obsidian UI state
+**/.obsidian/workspace.json
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+nul

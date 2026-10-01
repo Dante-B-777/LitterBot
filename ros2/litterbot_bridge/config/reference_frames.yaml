@@ -1,0 +1,55 @@
+reference_frames:
+  units: meters
+  axis_convention:
+    x: forward
+    y: left
+    z: up
+
+  base_link:
+    description: Center of the rectangle formed by the four wheel centers.
+    position_m:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+
+  chassis_geometry:
+    wheel_radius_m: 0.052
+    encoder_ticks_per_rev: 537.7
+    wheelbase_m: 0.33655
+    track_width_m: 0.41275
+    wheelbase_half_m: 0.168275
+    track_width_half_m: 0.206375
+
+  wheel_centers:
+    front_left:
+      x: 0.168275
+      y: 0.206375
+      z: 0.0
+    front_right:
+      x: 0.168275
+      y: -0.206375
+      z: 0.0
+    rear_left:
+      x: -0.168275
+      y: 0.206375
+      z: 0.0
+    rear_right:
+      x: -0.168275
+      y: -0.206375
+      z: 0.0
+
+  sensors:
+    camera:
+      frame_id: camera_link
+      description: RealSense D455f origin relative to base_link.
+      position_m:
+        x: 0.0
+        y: 0.0
+        z: 0.60325
+    lidar:
+      frame_id: laser
+      description: RPLidar origin relative to base_link.
+      position_m:
+        x: -0.127
+        y: 0.0
+        z: 0.3937

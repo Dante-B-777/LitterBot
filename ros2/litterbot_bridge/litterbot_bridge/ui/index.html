@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LitterBot Command Center</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0d0d;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---- Top bar ---- */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 48px;
+    background: #161616;
+    border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
+
+  #topbar h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #f0f0f0;
+  }
+
+  #topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #conn-status {
+    font-size: 12px;
+    color: #888;
+    transition: color 0.2s;
+  }
+  #conn-status.connected    { color: #66bb6a; }
+  #conn-status.disconnected { color: #ef5350; }
+
+  /* ---- Autonomy toggle ---- */
+  #autonomy-btn {
+    padding: 5px 14px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    background: #1a1a1a;
+    color: #aaa;
+  }
+  #autonomy-btn.autonomous {
+    background: #1a3a1a;
+    border-color: #66bb6a;
+    color: #66bb6a;
+  }
+  #autonomy-btn:hover { border-color: #888; color: #fff; }
+
+  /* ---- Pause button ---- */
+  #pause-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.15s, color 0.15s;
+    background: #b07d10;
+    color: #fff;
+  }
+  #pause-btn.paused       { background: #5a3e00; }
+  #pause-btn:hover        { background: #d4950f; }
+  #pause-btn.paused:hover { background: #66bb6a; color: #000; }
+
+  /* ---- E-stop button ---- */
+  #estop-btn {
+    padding: 6px 18px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.15s, color 0.15s;
+    background: #c0392b;
+    color: #fff;
+  }
+  #estop-btn.active       { background: #7f0000; }
+  #estop-btn:hover        { background: #e74c3c; }
+  #estop-btn.active:hover { background: #66bb6a; color: #000; }
+
+  /* ---- Status bar ---- */
+  #statusbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 16px;
+    height: 28px;
+    background: #111;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.03em;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #333;
+    transition: background 0.3s;
+  }
+  .dot.green  { background: #66bb6a; }
+  .dot.yellow { background: #ffa726; }
+  .dot.red    { background: #ef5350; }
+  .dot.orange { background: #ffa726; }
+
+  /* ---- Tab bar ---- */
+  #tab-bar {
+    display: flex;
+    gap: 0;
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0;
+    padding: 0 16px;
+  }
+
+  .tab {
+    padding: 8px 20px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #666;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: #aaa; }
+  .tab.active {
+    color: #4fc3f7;
+    border-bottom-color: #4fc3f7;
+  }
+
+  /* ---- Dev mode banner ---- */
+  #dev-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 24px;
+    background: #3a2a00;
+    color: #ffa726;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+  #dev-banner.active { display: flex; }
+
+  /* ---- Dev mode toggle in topbar ---- */
+  #dev-toggle {
+    padding: 4px 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #1a1a1a;
+    color: #666;
+    transition: all 0.15s;
+  }
+  #dev-toggle.active {
+    background: #3a2a00;
+    border-color: #ffa726;
+    color: #ffa726;
+  }
+
+  /* ---- Main layout (3-column) ---- */
+  #main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #log-col {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 340px;
+    border-right: 1px solid #2a2a2a;
+    overflow: hidden;
+  }
+
+  .log-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    border-bottom: 1px solid #2a2a2a;
+    overflow: hidden;
+  }
+  .log-panel:last-child { border-bottom: none; }
+
+  .log-header {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: #111;
+    flex-shrink: 0;
+  }
+  .log-header.stm32-tx { color: #4fc3f7; border-left: 3px solid #4fc3f7; }
+  .log-header.stm32-rx { color: #81c784; border-left: 3px solid #81c784; }
+  .log-header.node     { color: #ce93d8; border-left: 3px solid #ce93d8; }
+
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-size: 11.5px;
+    line-height: 1.5;
+    background: #0d0d0d;
+  }
+
+  .log-entry { display: flex; gap: 8px; }
+  .log-ts    { color: #555; flex-shrink: 0; }
+  .log-msg   { color: #ccc; word-break: break-all; }
+
+  /* ---- Center column (camera + LiDAR) ---- */
+  #center-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    border-right: 1px solid #2a2a2a;
+  }
+
+  /* ---- Right column (tabbed controls) ---- */
+  #right-col {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 340px;
+    min-height: 0;
+  }
+
+  .tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .tab-content.active {
+    display: flex;
+  }
+
+  /* ---- Camera panel ---- */
+  #camera-panel {
+    width: 100%;
+    max-height: 40%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
+    color: #333;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 1;
+  }
+
+  #camera-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: none;
+  }
+
+  #camera-placeholder {
+    color: #333;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ---- LiDAR pane ---- */
+  #lidar-panel {
+    display: flex;
+    flex-direction: column;
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
+    color: #8f8f8f;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    padding: 10px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  #lidar-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #66bb6a;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  #lidar-info {
+    color: #bdbdbd;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    white-space: pre;
+    min-height: 3.6em;
+    line-height: 1.2;
+    font-size: 11px;
+  }
+
+  #lidar-canvas {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    max-height: 35vh;
+    border: 1px solid #233423;
+    border-radius: 6px;
+    background:
+      radial-gradient(circle at center, rgba(102,187,106,0.08) 0, rgba(102,187,106,0.04) 35%, rgba(0,0,0,0) 36%),
+      linear-gradient(180deg, #091109, #050805);
+    display: block;
+  }
+
+  /* ---- Teleop panel ---- */
+  #teleop-panel {
+    flex: 0 0 auto;
+    padding: 12px 16px;
+    background: #0d0d0d;
+    position: relative;
+  }
+
+  #teleop-panel h3 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 10px;
+  }
+
+  /* ---- Key grid ---- */
+  #key-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 36px);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #aaa;
+    background: #1a1a1a;
+    transition: background 0.08s, color 0.08s, border-color 0.08s;
+    user-select: none;
+  }
+  .key.active {
+    background: #1a3a5c;
+    border-color: #4fc3f7;
+    color: #fff;
+  }
+  .key.empty { border: none; background: transparent; }
+
+  #space-key {
+    width: 124px;
+    height: 30px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    background: #1a1a1a;
+    transition: background 0.08s, color 0.08s;
+    user-select: none;
+  }
+  #space-key.active { background: #1a3a5c; border-color: #4fc3f7; color: #fff; }
+
+  /* ---- Scoop key ---- */
+  #scoop-key {
+    width: 124px;
+    height: 30px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    background: #1a1a1a;
+    transition: background 0.08s, color 0.08s, border-color 0.08s;
+    user-select: none;
+  }
+  #scoop-key.active   { background: #2a1a3a; border-color: #ce93d8; color: #ce93d8; }
+  #scoop-key.scooping { background: #1a2a3a; border-color: #ffa726; color: #ffa726; animation: pulse 0.6s infinite alternate; }
+
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+
+  /* ---- Speed slider ---- */
+  #speed-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    margin-bottom: 6px;
+  }
+
+  #speed-row label {
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    width: 42px;
+  }
+
+  #speed-slider {
+    flex: 1;
+    accent-color: #4fc3f7;
+    cursor: pointer;
+  }
+
+  #speed-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4fc3f7;
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ---- Overlays / legends ---- */
+  #teleop-legend {
+    font-size: 11px;
+    color: #555;
+    line-height: 1.7;
+    font-family: monospace;
+    margin-top: 8px;
+  }
+
+  #teleop-disabled-overlay {
+    display: none;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #3a0000;
+    border: 1px solid #c0392b;
+    border-radius: 4px;
+    color: #ef5350;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  #autonomy-overlay {
+    display: none;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #0a1f0a;
+    border: 1px solid #66bb6a;
+    border-radius: 4px;
+    color: #66bb6a;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  #pause-overlay {
+    display: none;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #2a1e00;
+    border: 1px solid #b07d10;
+    border-radius: 4px;
+    color: #ffa726;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  /* ---- Pane-level deploy overlay ---- */
+  #teleop-deploy-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(10, 10, 10, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  #teleop-deploy-overlay.hidden { display: none; }
+
+  #deploy-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ef5350;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  #deploy-subtitle {
+    font-size: 12px;
+    color: #888;
+    margin-top: -8px;
+  }
+
+  #deploy-btn {
+    position: relative;
+    width: 200px;
+    height: 48px;
+    border: 2px solid #66bb6a;
+    border-radius: 8px;
+    background: #1a1a1a;
+    color: #66bb6a;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    overflow: hidden;
+    user-select: none;
+    transition: border-color 0.2s;
+  }
+  #deploy-btn:hover { border-color: #81c784; }
+  #deploy-btn.deploying { border-color: #ffa726; color: #ffa726; cursor: wait; }
+
+  #deploy-progress {
+    position: absolute;
+    left: 0; bottom: 0;
+    height: 4px;
+    width: 0%;
+    background: #66bb6a;
+    transition: width 0.05s linear;
+    border-radius: 0 0 6px 6px;
+  }
+  #deploy-btn.deploying #deploy-progress { background: #ffa726; }
+
+  #deploy-status {
+    font-size: 11px;
+    color: #666;
+    min-height: 16px;
+  }
+
+  /* ---- Odom panel ---- */
+  #odom-panel {
+    background: #111;
+    border-top: 1px solid #2a2a2a;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #odom-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #4fc3f7;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  #odom-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .odom-cell {
+    background: #0b0f14;
+    border: 1px solid #1d2a38;
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  .odom-label {
+    font-size: 10px;
+    color: #6d859d;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .odom-value {
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 15px;
+    color: #d7ecff;
+  }
+
+  /* ---- Calibration panel ---- */
+  #cal-panel {
+    padding: 12px 16px;
+    background: #0d0d0d;
+  }
+
+  #cal-panel h3 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 10px;
+    margin-top: 16px;
+  }
+  #cal-panel h3:first-child { margin-top: 0; }
+
+  .cal-btn {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #111;
+    color: #ccc;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    overflow: hidden;
+    user-select: none;
+    margin-bottom: 6px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .cal-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .cal-btn:not(:disabled):hover { border-color: #ffa726; color: #ffa726; }
+  .cal-btn.holding { border-color: #ffa726; color: #ffa726; }
+  #cal-arm-progress {
+    position: absolute;
+    left: 0; bottom: 0;
+    height: 3px;
+    width: 0%;
+    background: #ffa726;
+    transition: width 0.05s linear;
+  }
+  .servo-save-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  #servo-setup-controls { display: none; }
+  #servo-setup-controls.visible { display: block; }
+
+  /* ---- Recordings panel ---- */
+  #rec-panel {
+    padding: 12px 16px;
+    background: #0d0d0d;
+  }
+
+  #rec-panel h3 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 10px;
+    margin-top: 16px;
+  }
+  #rec-panel h3:first-child { margin-top: 0; }
+
+  #record-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  #record-btn {
+    padding: 6px 14px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #1a1a1a;
+    color: #ddd;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #record-btn.active {
+    border-color: #ef5350;
+    color: #ef5350;
+    background: #2a1111;
+  }
+
+  #record-status {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.4;
+  }
+
+  #playback-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  #playback-select {
+    min-width: 0;
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #111;
+    color: #ddd;
+    font-size: 12px;
+  }
+
+  #playback-btn,
+  #refresh-bags-btn {
+    padding: 6px 14px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #1a1a1a;
+    color: #ddd;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  #playback-btn.active {
+    border-color: #ef5350;
+    color: #ef5350;
+    background: #2a1111;
+  }
+
+  #playback-status {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.4;
+    margin-bottom: 10px;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+
+<div id="dev-banner" class="">DEV MODE ACTIVE — SAFETY GATE BYPASSED</div>
+
+<div id="topbar">
+  <h1>LitterBot Command Center</h1>
+  <div id="topbar-right">
+    <span id="conn-status" class="disconnected">DISCONNECTED</span>
+    <button id="dev-toggle" onclick="toggleDevMode()">DEV</button>
+    <button id="autonomy-btn" onclick="toggleAutonomy()">TELEOP</button>
+    <button id="pause-btn" onclick="togglePause()">PAUSE</button>
+    <button id="estop-btn" onclick="toggleEstop()">STOP</button>
+  </div>
+</div>
+
+<div id="statusbar">
+  <div class="status-item"><div class="dot" id="dot-state"></div><span id="lbl-state">STANDBY</span></div>
+  <div class="status-item"><div class="dot" id="dot-ws"></div><span>WebSocket</span></div>
+  <div class="status-item"><div class="dot" id="dot-estop"></div><span id="lbl-estop">E-Stop OK</span></div>
+  <div class="status-item"><div class="dot" id="dot-stm32"></div><span>STM32</span></div>
+  <div class="status-item"><div class="dot" id="dot-bridge"></div><span>Bridge</span></div>
+  <div class="status-item"><div class="dot" id="dot-odom"></div><span>Odom</span></div>
+  <div class="status-item"><div class="dot" id="dot-localization"></div><span>Localization</span></div>
+  <div class="status-item"><div class="dot" id="dot-cam"></div><span>Camera</span></div>
+  <div class="status-item"><div class="dot" id="dot-lidar"></div><span>LiDAR</span></div>
+</div>
+
+<div id="tab-bar">
+  <button class="tab active" data-tab="command" onclick="switchTab('command')">COMMAND</button>
+  <button class="tab" data-tab="localization" onclick="switchTab('localization')">LOCALIZATION</button>
+  <button class="tab" data-tab="calibration" onclick="switchTab('calibration')">CALIBRATION</button>
+  <button class="tab" data-tab="recordings" onclick="switchTab('recordings')">RECORDINGS</button>
+</div>
+
+<div id="main">
+
+  <div id="log-col">
+    <div class="log-panel">
+      <div class="log-header stm32-tx">Jetson to STM32</div>
+      <div class="log-body" id="log-stm32-tx"></div>
+    </div>
+    <div class="log-panel">
+      <div class="log-header stm32-rx">STM32 to Jetson</div>
+      <div class="log-body" id="log-stm32-rx"></div>
+    </div>
+    <div class="log-panel">
+      <div class="log-header node">Node to Node</div>
+      <div class="log-body" id="log-node"></div>
+    </div>
+  </div>
+
+  <div id="center-col">
+    <div id="camera-panel">
+      <img id="camera-feed" alt="LitterBot camera feed">
+      <video id="camera-recording" controls style="display:none; width:100%; height:100%; object-fit:contain; background:#000;"></video>
+      <img id="camera-thumbnail" alt="Recording thumbnail" style="display:none; width:100%; height:100%; object-fit:contain; background:#000;">
+      <div id="camera-placeholder">[ Camera — not yet connected ]</div>
+      <div id="camera-rec-placeholder" style="display:none; color:#555; font-size:13px; letter-spacing:0.05em;">[ Select a recording to preview ]</div>
+    </div>
+    <div id="lidar-panel">
+      <div id="lidar-title">LiDAR</div>
+      <canvas id="lidar-canvas"></canvas>
+      <div id="lidar-info">[ LiDAR — not yet connected ]</div>
+    </div>
+  </div>
+
+  <div id="right-col">
+
+    <!-- Tab: Command -->
+    <div class="tab-content active" id="tab-command">
+      <div id="teleop-panel">
+        <div id="teleop-deploy-overlay">
+          <div id="deploy-title">ROBOT IN STANDBY</div>
+          <div id="deploy-subtitle">Hold DEPLOY for 3 seconds to activate</div>
+          <button id="deploy-btn"
+            onmousedown="deployStart()" onmouseup="deployCancel()" onmouseleave="deployCancel()"
+            ontouchstart="deployStart()" ontouchend="deployCancel()" ontouchcancel="deployCancel()">
+            DEPLOY
+            <div id="deploy-progress"></div>
+          </button>
+          <div id="deploy-status"></div>
+        </div>
+        <h3>Keyboard Teleop</h3>
+
+        <div id="key-grid">
+          <div class="key" id="key-q">Q</div>
+          <div class="key empty"></div>
+          <div class="key" id="key-e">E</div>
+          <div class="key empty"></div>
+          <div class="key" id="key-w">W</div>
+          <div class="key empty"></div>
+          <div class="key" id="key-a">A</div>
+          <div class="key" id="key-s">S</div>
+          <div class="key" id="key-d">D</div>
+        </div>
+        <div id="space-key">SPACE — Emergency Stop</div>
+        <div id="scoop-key">F — Scoop</div>
+
+        <div id="speed-row">
+          <label>Speed</label>
+          <input id="speed-slider" type="range" min="10" max="100" value="60"
+                 oninput="onSpeedChange(this.value)">
+          <span id="speed-val">60%</span>
+        </div>
+
+        <div id="teleop-legend">
+          W / S &nbsp;&nbsp;— forward / back<br>
+          A / D &nbsp;&nbsp;— rotate left / right<br>
+          Q / E &nbsp;&nbsp;— strafe left / right<br>
+          I / K &nbsp;&nbsp;— stepper jog CW / CCW (hold)<br>
+          O / L &nbsp;&nbsp;— servo jog + / − (hold)<br>
+          F &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;— scoop sequence<br>
+          SPACE &nbsp;— toggle emergency stop
+        </div>
+        <div id="teleop-disabled-overlay">TELEOP DISABLED — E-STOP ACTIVE</div>
+        <div id="autonomy-overlay">TELEOP DISABLED — AUTONOMOUS MODE</div>
+        <div id="pause-overlay">ALL MOTION PAUSED — CLICK RESUME TO CONTINUE</div>
+      </div>
+      <div id="odom-panel">
+        <div id="odom-title">Odometry</div>
+        <div id="odom-grid">
+          <div class="odom-cell">
+            <div class="odom-label">X</div>
+            <div class="odom-value" id="odom-x">0.000 m</div>
+          </div>
+          <div class="odom-cell">
+            <div class="odom-label">Y</div>
+            <div class="odom-value" id="odom-y">0.000 m</div>
+          </div>
+          <div class="odom-cell">
+            <div class="odom-label">Heading</div>
+            <div class="odom-value" id="odom-yaw">0.0 deg</div>
+          </div>
+          <div class="odom-cell">
+            <div class="odom-label">Vx</div>
+            <div class="odom-value" id="odom-vx">0.000 m/s</div>
+          </div>
+          <div class="odom-cell">
+            <div class="odom-label">Vy</div>
+            <div class="odom-value" id="odom-vy">0.000 m/s</div>
+          </div>
+          <div class="odom-cell">
+            <div class="odom-label">Wz</div>
+            <div class="odom-value" id="odom-wz">0.000 rad/s</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Localization -->
+    <div class="tab-content" id="tab-localization">
+      <div id="odom-panel">
+        <div id="odom-title">Localization</div>
+        <div id="odom-grid">
+          <div class="odom-cell"><div class="odom-label">X</div><div class="odom-value" id="loc-x">0.000 m</div></div>
+          <div class="odom-cell"><div class="odom-label">Y</div><div class="odom-value" id="loc-y">0.000 m</div></div>
+          <div class="odom-cell"><div class="odom-label">Heading</div><div class="odom-value" id="loc-yaw">0.0 deg</div></div>
+          <div class="odom-cell"><div class="odom-label">Vx</div><div class="odom-value" id="loc-vx">0.000 m/s</div></div>
+          <div class="odom-cell"><div class="odom-label">Vy</div><div class="odom-value" id="loc-vy">0.000 m/s</div></div>
+          <div class="odom-cell"><div class="odom-label">Wz</div><div class="odom-value" id="loc-wz">0.000 rad/s</div></div>
+        </div>
+        <div id="teleop-legend" style="margin-top:14px;">
+          Source: <span id="loc-source">/odometry/ekf</span><br>
+          Status: <span id="loc-status">Localization idle</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Calibration -->
+    <div class="tab-content" id="tab-calibration">
+      <div id="cal-panel">
+        <h3>Arm Calibration</h3>
+        <div class="servo-save-row">
+          <button class="cal-btn" onclick="calHome()">HOME FRONT ZERO</button>
+          <button class="cal-btn" onclick="calStatus()">READ STATUS</button>
+        </div>
+        <button class="cal-btn" id="cal-arm-btn"
+          onmousedown="calArmStart()" onmouseup="calArmCancel()" onmouseleave="calArmCancel()"
+          ontouchstart="calArmStart()" ontouchend="calArmCancel()" ontouchcancel="calArmCancel()">
+          CAL ARM (hold 2s)
+          <div id="cal-arm-progress"></div>
+        </button>
+
+        <h3>Saved Poses</h3>
+        <div id="servo-setup-controls" class="visible">
+          <div class="servo-save-row">
+            <button class="cal-btn" onclick="calSavePose(1)">SAVE P1</button>
+            <button class="cal-btn" onclick="calSavePose(2)">SAVE P2</button>
+          </div>
+          <div class="servo-save-row">
+            <button class="cal-btn" onclick="calSavePose(3)">SAVE P3</button>
+            <button class="cal-btn" onclick="calSavePose(4)">SAVE P4</button>
+          </div>
+          <div class="servo-save-row">
+            <button class="cal-btn" onclick="calSavePose(5)">SAVE P5</button>
+            <button class="cal-btn" onclick="calSavePose(6)">SAVE P6</button>
+          </div>
+          <div class="servo-save-row">
+            <button class="cal-btn" onclick="calSavePose(7)">SAVE P7</button>
+            <button class="cal-btn" onclick="calSavePose(8)">SAVE P8</button>
+          </div>
+          <div class="servo-save-row">
+            <button class="cal-btn" onclick="calSavePose(9)">SAVE P9</button>
+            <button class="cal-btn" onclick="calSavePose(10)">SAVE P10</button>
+          </div>
+        </div>
+
+        <h3>Servo Jog (O / L)</h3>
+        <div class="servo-save-row">
+          <button class="cal-btn"
+            onmousedown="startServoJog('-')" onmouseup="stopServoJog('-')" onmouseleave="stopServoJog('-')"
+            ontouchstart="event.preventDefault(); startServoJog('-')" ontouchend="stopServoJog('-')" ontouchcancel="stopServoJog('-')">
+            −  (L)
+          </button>
+          <button class="cal-btn"
+            onmousedown="startServoJog('+')" onmouseup="stopServoJog('+')" onmouseleave="stopServoJog('+')"
+            ontouchstart="event.preventDefault(); startServoJog('+')" ontouchend="stopServoJog('+')" ontouchcancel="stopServoJog('+')">
+            +  (O)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Recordings -->
+    <div class="tab-content" id="tab-recordings">
+      <div id="rec-panel">
+        <h3>Record New</h3>
+        <div id="record-row">
+          <button id="record-btn" onclick="toggleRecording()">REC DATA</button>
+        </div>
+        <div id="record-status">Recording idle</div>
+
+        <h3>Saved Recordings</h3>
+        <div id="rec-list-row" style="display:flex; gap:8px; margin-bottom:8px;">
+          <select id="rec-select" style="flex:1; min-width:0; padding:6px 10px; border:1px solid #444; border-radius:4px; background:#111; color:#ddd; font-size:12px;" onchange="onRecordingSelect()"></select>
+          <button id="rec-refresh-btn" onclick="loadRecordingList()" style="padding:6px 14px; border:1px solid #444; border-radius:4px; background:#1a1a1a; color:#ddd; font-size:12px; font-weight:700; cursor:pointer;">REFRESH</button>
+        </div>
+        <div id="rec-info" style="font-size:11px; color:#888; margin-bottom:10px;"></div>
+        <button id="rec-play-btn" onclick="playRecording()" style="width:100%; height:40px; border:1px solid #444; border-radius:6px; background:#111; color:#ccc; font-size:12px; font-weight:600; cursor:pointer; margin-bottom:6px;" disabled>PLAY VIDEO</button>
+        <div id="rec-play-status" style="font-size:11px; color:#888;"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const MAX_LOG   = 100;
+const TELEOP_HZ = 10;
+const BASE_SPEED = { vx: 0.5, vy: 0.5, wz: 0.8 };
+
+let ws             = null;
+let estopActive    = false;
+let pauseActive    = false;
+let autonomyActive = false;
+let speedScale     = 0.6;
+let scooping       = false;
+let teleopInterval = null;
+
+let lastStm32TxTime = 0;
+let lastStm32RxTime = 0;
+let lastOdomTime    = 0;
+let lastLocalizationTime = 0;
+let lastEncoderTime = 0;
+let lastScanTime    = 0;
+let lastCameraFrameTime = 0;
+let cameraConnected = false;
+let lidarConnected  = false;
+let recordingActive = false;
+let recordingPath   = '';
+let playbackActive  = false;
+let playbackPath    = '';
+let availableBags   = [];
+let lastLidarPlot   = [];
+let lastLidarRangeMax = 12.0;
+let lastOdom = { x: 0, y: 0, yaw_deg: 0, vx: 0, vy: 0, wz: 0, ts: 0 };
+let lastLocalization = { x: 0, y: 0, yaw_deg: 0, vx: 0, vy: 0, wz: 0, source: '/odometry/ekf', ts: 0 };
+let lastLocalizationStatus = 'Localization idle';
+
+// Deploy/standby state
+let robotState     = 'STANDBY';
+let devMode        = false;
+let deployTimer    = null;
+let deployStartTs  = 0;
+const DEPLOY_HOLD_MS = 3000;
+
+const KEY_MAP = {
+  'w': { vx:  1, vy:  0, wz:  0 },
+  's': { vx: -1, vy:  0, wz:  0 },
+  'a': { vx:  0, vy:  0, wz:  1 },
+  'd': { vx:  0, vy:  0, wz: -1 },
+  'q': { vx:  0, vy:  1, wz:  0 },
+  'e': { vx:  0, vy: -1, wz:  0 },
+};
+const heldKeys = new Set();
+
+// ---- Stepper jog (I/K keys) ----
+// Each burst is small enough that it finishes well before the next
+// scheduled tick, so when the user releases the key the stepper stops on
+// its own without needing an explicit stop message.
+const STEPPER_JOG_KEYS = { 'i': 'CW', 'k': 'CCW' };
+// Continuous firmware-side jog: UI sends one JOG_START on keydown and one
+// JOG_STOP on keyup. The STM32 runs a tight CL57T_Jog loop in between,
+// polling its UART command-ready flag. Any new line breaks the loop.
+// Zero burst-to-burst gaps — fixes the 22 Hz hammering we got with the
+// old interval-based burst jog at microstep 16.
+const STEPPER_JOG_DELAY_US = 85;   // step period = 3 µs pulse + 85 µs = 88 µs
+                                   // → 11.36 kHz @ microstep 16 (3200 p/r)
+                                   // → 3.55 rev/s (213 RPM) continuous
+let stepperJogDir = null;          // 'CW' | 'CCW' | null
+
+// ---- Servo jog (O/L keys) ----
+// HX-65HM bucket servo — hold O to glide toward 4095, L toward 0.
+// Exactly one message is sent on keydown (`servo_jog_start`) and one
+// on keyup (`servo_jog_stop`). The firmware sends a single HX65
+// MovePositionSpeed at a slow tuned speed, and the servo's internal
+// controller handles the smooth glide — no repeated UART traffic,
+// no per-command trajectory re-plan, no ticking.
+const SERVO_JOG_KEYS = { 'o': '+', 'l': '-' };
+let servoJogSign = null;            // '+' | '-' | null
+
+// ---- Tab switching ----
+
+let activeTab = 'command';
+let recList = [];
+let selectedRec = null;
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  activeTab = tabName;
+  if (tabName !== 'recordings') {
+    // Leaving recordings tab — stop playback sync so live feeds resume
+    stopLidarSync();
+    const vid = document.getElementById('camera-recording');
+    if (vid) { vid.pause(); vid.style.display = 'none'; vid.src = ''; }
+    document.getElementById('camera-thumbnail').style.display = 'none';
+    document.getElementById('camera-rec-placeholder').style.display = 'none';
+  }
+  updateCameraMode();
+  if (tabName === 'recordings') loadRecordingList();
+}
+
+function updateCameraMode() {
+  const feed = document.getElementById('camera-feed');
+  const placeholder = document.getElementById('camera-placeholder');
+  const recPlaceholder = document.getElementById('camera-rec-placeholder');
+  const recording = document.getElementById('camera-recording');
+  const thumbnail = document.getElementById('camera-thumbnail');
+
+  if (activeTab === 'recordings') {
+    // Hide live feed
+    feed.style.display = 'none';
+    placeholder.style.display = 'none';
+    // Show recording content or placeholder
+    if (recording.src && recording.style.display !== 'none') {
+      // Video is playing, leave it
+    } else if (thumbnail.src && thumbnail.style.display !== 'none') {
+      // Thumbnail showing, leave it
+    } else {
+      recPlaceholder.style.display = '';
+    }
+  } else {
+    // Live mode
+    recording.style.display = 'none';
+    recording.pause();
+    recording.src = '';
+    thumbnail.style.display = 'none';
+    recPlaceholder.style.display = 'none';
+    // Restore live feed visibility
+    if (cameraConnected && feed.src) {
+      feed.style.display = 'block';
+      placeholder.style.display = 'none';
+    } else {
+      feed.style.display = 'none';
+      placeholder.style.display = '';
+    }
+  }
+}
+
+async function loadRecordingList() {
+  try {
+    const resp = await fetch('/api/recordings');
+    const data = await resp.json();
+    recList = Array.isArray(data.recordings) ? data.recordings : [];
+  } catch (_) {
+    recList = [];
+  }
+  const select = document.getElementById('rec-select');
+  select.innerHTML = '';
+  if (!recList.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No recordings found';
+    select.appendChild(opt);
+    select.disabled = true;
+    document.getElementById('rec-play-btn').disabled = true;
+    return;
+  }
+  select.disabled = false;
+  for (const rec of recList) {
+    const opt = document.createElement('option');
+    opt.value = rec.name;
+    opt.textContent = `${rec.name} (${rec.modified})`;
+    select.appendChild(opt);
+  }
+  onRecordingSelect();
+}
+
+function onRecordingSelect() {
+  const select = document.getElementById('rec-select');
+  const name = select.value;
+  if (!name) {
+    selectedRec = null;
+    document.getElementById('rec-play-btn').disabled = true;
+    document.getElementById('rec-info').textContent = '';
+    return;
+  }
+
+  // Find this recording in the already-loaded list (no fetch needed)
+  selectedRec = recList.find(r => r.name === name) || null;
+  // Clear any previously loaded detail data
+  if (selectedRec) {
+    selectedRec.scan_frames = null;
+    selectedRec.odom_frames = null;
+  }
+
+  const info = document.getElementById('rec-info');
+  const playBtn = document.getElementById('rec-play-btn');
+  const thumbnail = document.getElementById('camera-thumbnail');
+  const recording = document.getElementById('camera-recording');
+  const recPlaceholder = document.getElementById('camera-rec-placeholder');
+
+  if (!selectedRec) {
+    info.textContent = 'Recording not found';
+    playBtn.disabled = true;
+    return;
+  }
+
+  info.textContent = `Modified: ${selectedRec.modified || 'unknown'}`;
+
+  if (selectedRec.mp4_url) {
+    playBtn.disabled = false;
+    // Show first frame as thumbnail
+    recording.style.display = 'none';
+    recording.pause();
+    recPlaceholder.style.display = 'none';
+    thumbnail.src = '';
+    const tmpVid = document.createElement('video');
+    tmpVid.src = selectedRec.mp4_url;
+    tmpVid.muted = true;
+    tmpVid.preload = 'metadata';
+    tmpVid.onloadeddata = () => { tmpVid.currentTime = 0.1; };
+    tmpVid.onseeked = () => {
+      const cvs = document.createElement('canvas');
+      cvs.width = tmpVid.videoWidth;
+      cvs.height = tmpVid.videoHeight;
+      cvs.getContext('2d').drawImage(tmpVid, 0, 0);
+      thumbnail.src = cvs.toDataURL('image/jpeg');
+      thumbnail.style.display = 'block';
+    };
+  } else {
+    playBtn.disabled = true;
+    info.textContent += ' | MP4 still exporting...';
+    thumbnail.style.display = 'none';
+    recPlaceholder.style.display = '';
+  }
+}
+
+let recLidarSyncId = null;
+
+async function playRecording() {
+  if (!selectedRec || !selectedRec.mp4_url) return;
+  const recording = document.getElementById('camera-recording');
+  const thumbnail = document.getElementById('camera-thumbnail');
+  const recPlaceholder = document.getElementById('camera-rec-placeholder');
+  const playBtn = document.getElementById('rec-play-btn');
+
+  thumbnail.style.display = 'none';
+  recPlaceholder.style.display = 'none';
+  recording.src = selectedRec.mp4_url;
+  recording.style.display = 'block';
+  recording.play();
+  playBtn.textContent = 'STOP VIDEO';
+  playBtn.onclick = stopRecordingPlayback;
+
+  // Lazy-load scan/odom frames for LiDAR sync (only fetched on play, not on select)
+  if (!selectedRec.scan_frames) {
+    try {
+      const resp = await fetch(`/api/recordings/${encodeURIComponent(selectedRec.name)}`);
+      if (resp.ok) {
+        const detail = await resp.json();
+        selectedRec.scan_frames = detail.scan_frames || [];
+        selectedRec.odom_frames = detail.odom_frames || [];
+      }
+    } catch (e) {
+      console.warn('Failed to load recording detail for LiDAR sync:', e);
+    }
+  }
+
+  // Start LiDAR sync loop (will no-op if scan_frames didn't load)
+  startLidarSync();
+}
+
+function stopRecordingPlayback() {
+  const recording = document.getElementById('camera-recording');
+  const playBtn = document.getElementById('rec-play-btn');
+  recording.pause();
+  recording.style.display = 'none';
+  recording.src = '';
+  playBtn.textContent = 'PLAY VIDEO';
+  playBtn.onclick = playRecording;
+  stopLidarSync();
+  // Re-show thumbnail if we had one
+  if (selectedRec && selectedRec.mp4_url) {
+    onRecordingSelect();
+  }
+}
+
+function startLidarSync() {
+  stopLidarSync();
+  if (!selectedRec || !selectedRec.scan_frames || !selectedRec.scan_frames.length) return;
+  const video = document.getElementById('camera-recording');
+  const scans = selectedRec.scan_frames;
+  const odoms = selectedRec.odom_frames || [];
+
+  recLidarSyncId = setInterval(() => {
+    if (video.paused || video.ended) return;
+    const t = video.currentTime;
+
+    // Find closest scan frame at or before current time
+    let scanIdx = 0;
+    for (let i = scans.length - 1; i >= 0; i--) {
+      if (scans[i].t <= t) { scanIdx = i; break; }
+    }
+    const scan = scans[scanIdx];
+    lastLidarPlot = scan.plot_points || [];
+    lastLidarRangeMax = scan.range_max || 12.0;
+    renderLidarPlot();
+
+    // Find closest odom frame
+    if (odoms.length) {
+      let odomIdx = 0;
+      for (let i = odoms.length - 1; i >= 0; i--) {
+        if (odoms[i].t <= t) { odomIdx = i; break; }
+      }
+      renderOdom(odoms[odomIdx]);
+    }
+  }, 100);  // sync at 10Hz
+}
+
+function stopLidarSync() {
+  if (recLidarSyncId !== null) {
+    clearInterval(recLidarSyncId);
+    recLidarSyncId = null;
+  }
+}
+
+// ---- WebSocket ----
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen  = () => { setConnStatus(true);  startTeleopLoop(); updateDots(); };
+  ws.onclose = () => { setConnStatus(false); stopTeleopLoop();  updateDots(); setTimeout(connect, 2000); };
+  ws.onerror = () => { ws.close(); };
+  ws.onmessage = (evt) => {
+    try {
+      const data = JSON.parse(evt.data);
+      if (data.type === 'log') {
+        appendLog(data.channel, data.ts, data.msg);
+        if (data.channel === 'stm32_tx') lastStm32TxTime = data.ts;
+        if (data.channel === 'stm32_rx') {
+          lastStm32RxTime = data.ts;
+          lastEncoderTime = data.ts;
+        }
+        if (data.channel === 'node' && data.msg.startsWith('/odom')) lastOdomTime = data.ts;
+        updateDots();
+      } else if (data.type === 'state') {
+        robotState = data.state || 'STANDBY';
+        devMode = !!data.dev_mode;
+        applyStateUI();
+      } else if (data.type === 'camera_frame') {
+        cameraConnected = true;
+        lastCameraFrameTime = data.ts || (Date.now() / 1000);
+        renderCameraFrame(data);
+        updateDots();
+      } else if (data.type === 'sensor_status') {
+        cameraConnected = !!data.camera_connected;
+        lidarConnected = !!data.lidar_connected;
+        recordingActive = !!data.recording;
+        recordingPath = data.recording_path || '';
+        playbackActive = !!data.playback;
+        playbackPath = data.playback_path || '';
+        availableBags = Array.isArray(data.available_bags) ? data.available_bags : [];
+        applyRecordingState();
+        applyPlaybackState();
+        updateDots();
+      } else if (data.type === 'odom') {
+        lastOdom = data;
+        lastOdomTime = data.ts || (Date.now() / 1000);
+        renderOdom(data);
+        updateDots();
+      } else if (data.type === 'localization') {
+        lastLocalization = data;
+        lastLocalizationTime = data.ts || (Date.now() / 1000);
+        renderLocalization(data);
+        updateDots();
+      } else if (data.type === 'localization_status') {
+        lastLocalizationStatus = data.status || 'Localization idle';
+        renderLocalizationStatus();
+      } else if (data.type === 'lidar_scan') {
+        if (recLidarSyncId !== null) return;  // Skip live scans during recording playback
+        lastScanTime = data.ts || (Date.now() / 1000);
+        lastLidarPlot = Array.isArray(data.plot_points) ? data.plot_points : [];
+        lastLidarRangeMax = data.range_max || 12.0;
+        const info = [
+          `Points: ${data.points}`,
+          `Angle: ${data.angle_min.toFixed(2)} to ${data.angle_max.toFixed(2)}`,
+          `Range: ${data.range_min.toFixed(2)} to ${data.range_max.toFixed(2)}`
+        ].join('\n');
+        document.getElementById('lidar-info').textContent = info;
+        renderLidarPlot();
+        updateDots();
+      }
+    } catch (_) {}
+  };
+}
+
+function setConnStatus(connected) {
+  const el = document.getElementById('conn-status');
+  el.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+  el.className   = connected ? 'connected'  : 'disconnected';
+}
+
+// ---- Status dots ----
+
+function setDot(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('green', 'yellow', 'red');
+  if (state) el.classList.add(state);
+}
+
+function updateDots() {
+  const now  = Date.now() / 1000;
+  const wsOk = ws && ws.readyState === WebSocket.OPEN;
+
+  setDot('dot-ws',    wsOk ? 'green' : 'red');
+  setDot('dot-estop', estopActive ? 'red' : 'green');
+
+  const lastStm32Activity = Math.max(lastStm32TxTime, lastStm32RxTime);
+  const stm32Age = now - lastStm32Activity;
+  setDot('dot-stm32',  lastStm32Activity === 0 ? null :
+                        stm32Age < 5  ? 'green' :
+                        stm32Age < 30 ? 'yellow' : 'red');
+
+  setDot('dot-bridge', !wsOk ? 'red' : lastStm32Activity === 0 ? 'yellow' : 'green');
+
+  const odomAge = now - lastOdomTime;
+  setDot('dot-odom',   lastOdomTime === 0 ? null :
+                        odomAge < 5  ? 'green' :
+                        odomAge < 30 ? 'yellow' : 'red');
+
+  const localizationAge = now - lastLocalizationTime;
+  setDot('dot-localization', lastLocalizationTime === 0 ? null :
+                              localizationAge < 5 ? 'green' :
+                              localizationAge < 30 ? 'yellow' : 'red');
+
+  const cameraAge = now - lastCameraFrameTime;
+  setDot('dot-cam', lastCameraFrameTime === 0 ? (cameraConnected ? 'yellow' : 'red') :
+                    cameraAge < 5 ? 'green' :
+                    cameraAge < 30 ? 'yellow' : 'red');
+
+  setDot('dot-lidar', lastScanTime === 0 ? (lidarConnected ? 'yellow' : 'red') :
+                      (now - lastScanTime) < 5 ? 'green' :
+                      (now - lastScanTime) < 30 ? 'yellow' : 'red');
+
+  const lbl = document.getElementById('lbl-estop');
+  if (lbl) lbl.textContent = estopActive ? 'E-STOP ON' : 'E-Stop OK';
+}
+
+setInterval(updateDots, 3000);
+
+// ---- Log ----
+
+const CHANNEL_TO_ID = { stm32_tx: 'log-stm32-tx', stm32_rx: 'log-stm32-rx', node: 'log-node' };
+
+function appendLog(channel, ts, msg) {
+  const bodyId = CHANNEL_TO_ID[channel];
+  if (!bodyId) return;
+  const body  = document.getElementById(bodyId);
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const tsEl  = document.createElement('span');
+  tsEl.className   = 'log-ts';
+  tsEl.textContent = new Date(ts * 1000).toLocaleTimeString('en-US', { hour12: false });
+  const msgEl = document.createElement('span');
+  msgEl.className   = 'log-msg';
+  msgEl.textContent = msg;
+  entry.appendChild(tsEl);
+  entry.appendChild(msgEl);
+  body.appendChild(entry);
+  while (body.childElementCount > MAX_LOG) body.removeChild(body.firstElementChild);
+  body.scrollTop = body.scrollHeight;
+}
+
+function renderCameraFrame(data) {
+  const feed = document.getElementById('camera-feed');
+  const placeholder = document.getElementById('camera-placeholder');
+  if (!data || !data.data) return;
+  // Always update src even on the recordings tab, so when the user switches
+  // back the image is current instead of frozen at the frame from the moment
+  // they left. Visibility is managed separately by updateCameraMode().
+  feed.src = `data:image/jpeg;base64,${data.data}`;
+  if (activeTab !== 'recordings') {
+    feed.style.display = 'block';
+    placeholder.style.display = 'none';
+  }
+}
+
+function renderLidarPlot() {
+  const canvas = document.getElementById('lidar-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const maxRadius = Math.min(w, h) * 0.44;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#071007';
+  ctx.fillRect(0, 0, w, h);
+
+  // Range rings (full circle)
+  ctx.strokeStyle = '#173117';
+  ctx.lineWidth = 1;
+  for (let i = 1; i <= 4; i++) {
+    const r = (maxRadius * i) / 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+  // Cross-hair lines
+  for (let deg = 0; deg < 360; deg += 30) {
+    const ang = (deg * Math.PI) / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(ang) * maxRadius, cy - Math.sin(ang) * maxRadius);
+    ctx.stroke();
+  }
+
+  // Robot marker at center
+  ctx.fillStyle = '#66bb6a';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Forward direction indicator
+  ctx.strokeStyle = '#66bb6a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx, cy - maxRadius * 0.15);
+  ctx.stroke();
+
+  if (!lastLidarPlot.length) {
+    ctx.fillStyle = '#6f8a6f';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Waiting for LiDAR scan...', cx, h / 2 + maxRadius * 0.5);
+    return;
+  }
+
+  const denom = Math.max(0.1, lastLidarRangeMax);
+  ctx.fillStyle = '#8df58d';
+  for (const pt of lastLidarPlot) {
+    const angle = pt[0];
+    const range = pt[1];
+    const r = Math.min(1.0, range / denom) * maxRadius;
+    const x = cx + Math.sin(angle) * r;
+    const y = cy - Math.cos(angle) * r;
+    ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+  }
+}
+
+function renderOdom(data) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  set('odom-x', `${(data.x || 0).toFixed(3)} m`);
+  set('odom-y', `${(data.y || 0).toFixed(3)} m`);
+  set('odom-yaw', `${(data.yaw_deg || 0).toFixed(1)} deg`);
+  set('odom-vx', `${(data.vx || 0).toFixed(3)} m/s`);
+  set('odom-vy', `${(data.vy || 0).toFixed(3)} m/s`);
+  set('odom-wz', `${(data.wz || 0).toFixed(3)} rad/s`);
+}
+
+function renderLocalization(data) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  set('loc-x', `${(data.x || 0).toFixed(3)} m`);
+  set('loc-y', `${(data.y || 0).toFixed(3)} m`);
+  set('loc-yaw', `${(data.yaw_deg || 0).toFixed(1)} deg`);
+  set('loc-vx', `${(data.vx || 0).toFixed(3)} m/s`);
+  set('loc-vy', `${(data.vy || 0).toFixed(3)} m/s`);
+  set('loc-wz', `${(data.wz || 0).toFixed(3)} rad/s`);
+  set('loc-source', data.source || '/odometry/ekf');
+  renderLocalizationStatus();
+}
+
+function renderLocalizationStatus() {
+  const el = document.getElementById('loc-status');
+  if (el) el.textContent = lastLocalizationStatus;
+}
+
+// ---- E-stop ----
+
+function toggleEstop() {
+  estopActive = !estopActive;
+  applyEstopState();
+}
+
+function applyEstopState() {
+  const btn     = document.getElementById('estop-btn');
+  const overlay = document.getElementById('teleop-disabled-overlay');
+  if (estopActive) {
+    btn.textContent = 'RESUME';
+    btn.classList.add('active');
+    overlay.style.display = 'block';
+    heldKeys.clear();
+    updateKeyDisplay();
+    if (pauseActive) {
+      pauseActive = false;
+      document.getElementById('pause-btn').textContent = 'PAUSE';
+      document.getElementById('pause-btn').classList.remove('paused');
+      document.getElementById('pause-overlay').style.display = 'none';
+    }
+  } else {
+    btn.textContent = 'STOP';
+    btn.classList.remove('active');
+    overlay.style.display = 'none';
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'estop', active: estopActive }));
+  }
+  updateDots();
+}
+
+// ---- Pause ----
+
+function togglePause() {
+  if (estopActive) return;
+  pauseActive = !pauseActive;
+  const btn     = document.getElementById('pause-btn');
+  const overlay = document.getElementById('pause-overlay');
+  if (pauseActive) {
+    btn.textContent = 'RESUME';
+    btn.classList.add('paused');
+    overlay.style.display = 'block';
+    heldKeys.clear();
+    updateKeyDisplay();
+  } else {
+    btn.textContent = 'PAUSE';
+    btn.classList.remove('paused');
+    overlay.style.display = 'none';
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'pause', active: pauseActive }));
+  }
+  updateDots();
+}
+
+// ---- Autonomy toggle ----
+
+function toggleAutonomy() {
+  autonomyActive = !autonomyActive;
+  const btn     = document.getElementById('autonomy-btn');
+  const overlay = document.getElementById('autonomy-overlay');
+  if (autonomyActive) {
+    btn.textContent = 'AUTONOMOUS';
+    btn.classList.add('autonomous');
+    overlay.style.display = 'block';
+    heldKeys.clear();
+    updateKeyDisplay();
+  } else {
+    btn.textContent = 'TELEOP';
+    btn.classList.remove('autonomous');
+    overlay.style.display = 'none';
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'autonomy', active: autonomyActive }));
+  }
+}
+
+function teleopBlocked() {
+  return estopActive || pauseActive || autonomyActive || (robotState !== 'ACTIVE' && !devMode);
+}
+
+// ---- Speed ----
+
+function onSpeedChange(val) {
+  speedScale = parseInt(val, 10) / 100;
+  document.getElementById('speed-val').textContent = val + '%';
+}
+
+function toggleRecording() {
+  let runName = '';
+  if (!recordingActive) {
+    const entered = window.prompt('Name this test run:', '');
+    if (entered === null) return;
+    runName = entered.trim();
+  }
+  recordingActive = !recordingActive;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'record', active: recordingActive, run_name: runName }));
+  }
+  applyRecordingState();
+}
+
+function applyRecordingState() {
+  const btn = document.getElementById('record-btn');
+  const status = document.getElementById('record-status');
+  if (recordingActive) {
+    btn.classList.add('active');
+    btn.textContent = 'STOP REC';
+    status.textContent = recordingPath ? `Recording: ${recordingPath}` : 'Recording...';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = 'REC DATA';
+    status.textContent = recordingPath ? `Last bag: ${recordingPath}` : 'Recording idle';
+  }
+}
+
+function refreshBagInventory() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'refresh_bags' }));
+  }
+}
+
+function syncBagSelect() {
+  const select = document.getElementById('playback-select');
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = '';
+
+  if (!availableBags.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No bags found';
+    select.appendChild(opt);
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  for (const bag of availableBags) {
+    const opt = document.createElement('option');
+    opt.value = bag;
+    opt.textContent = bag.split(/[\\/]/).pop();
+    select.appendChild(opt);
+  }
+
+  const preferred = playbackPath || recordingPath || currentValue;
+  if (preferred && availableBags.includes(preferred)) {
+    select.value = preferred;
+  }
+}
+
+function applyPlaybackState() {
+  // Legacy — kept for sensor_status messages but no longer drives UI
+}
+
+// ---- Scoop ----
+
+function triggerScoop() {
+  if (estopActive || scooping || autonomyActive) return;
+  scooping = true;
+  const key = document.getElementById('scoop-key');
+  key.classList.remove('active');
+  key.classList.add('scooping');
+  key.textContent = 'F — SCOOPING...';
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'scoop' }));
+  }
+  setTimeout(() => {
+    scooping = false;
+    key.classList.remove('scooping');
+    key.textContent = 'F — Scoop';
+  }, 3000);
+}
+
+// ---- Keyboard ----
+
+document.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+
+  if (k === 'f') {
+    e.preventDefault();
+    if (!scooping) {
+      const key = document.getElementById('scoop-key');
+      key.classList.add('active');
+      triggerScoop();
+    }
+    return;
+  }
+
+  if (k === ' ') {
+    e.preventDefault();
+    if (!e.repeat) toggleEstop();
+    return;
+  }
+
+  // Stepper jog (I = CW, K = CCW) — start sending bursts on first press.
+  // Ignore key-repeat so we don't restart the interval on every OS repeat.
+  if (STEPPER_JOG_KEYS[k]) {
+    e.preventDefault();
+    if (!e.repeat && !teleopBlocked()) startStepperJog(STEPPER_JOG_KEYS[k]);
+    return;
+  }
+
+  // Servo jog (O = +, L = −)
+  if (SERVO_JOG_KEYS[k]) {
+    e.preventDefault();
+    if (!e.repeat && !teleopBlocked()) startServoJog(SERVO_JOG_KEYS[k]);
+    return;
+  }
+
+  if (teleopBlocked()) return;
+
+  if (KEY_MAP[k] && !heldKeys.has(k)) { heldKeys.add(k); updateKeyDisplay(); }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ') { e.preventDefault(); return; }
+  const k = e.key.toLowerCase();
+  if (k === 'f') {
+    const key = document.getElementById('scoop-key');
+    if (!scooping) key.classList.remove('active');
+  }
+  if (STEPPER_JOG_KEYS[k]) {
+    stopStepperJog(STEPPER_JOG_KEYS[k]);
+  }
+  if (SERVO_JOG_KEYS[k]) {
+    stopServoJog(SERVO_JOG_KEYS[k]);
+  }
+  if (heldKeys.delete(k)) updateKeyDisplay();
+});
+
+function startStepperJog(dir) {
+  // If already jogging in this direction, nothing to do.
+  if (stepperJogDir === dir) return;
+  // If jogging in the other direction, stop first so firmware latches
+  // the new DIR pin before the fresh START arrives.
+  if (stepperJogDir !== null) stopStepperJog();
+  if (teleopBlocked() || !ws || ws.readyState !== WebSocket.OPEN) return;
+  stepperJogDir = dir;
+  ws.send(JSON.stringify({
+    type: 'stepper_jog_start',
+    dir,
+    delay_us: STEPPER_JOG_DELAY_US,
+  }));
+}
+
+function stopStepperJog(dir) {
+  // If a specific direction was passed, only stop if it matches the
+  // currently-active jog — makes I/K releases independent when the
+  // user mashes both keys.
+  if (dir && stepperJogDir !== dir) return;
+  if (stepperJogDir === null) return;
+  stepperJogDir = null;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: 'stepper_jog_stop' }));
+}
+
+// Safety: if the browser loses focus while a jog key is held, the keyup
+// event never fires, so the stepper would keep running forever. Stop on blur.
+window.addEventListener('blur', () => stopStepperJog());
+
+function startServoJog(sign) {
+  if (servoJogSign === sign) return;
+  if (servoJogSign !== null) stopServoJog();
+  if (teleopBlocked() || !ws || ws.readyState !== WebSocket.OPEN) return;
+  servoJogSign = sign;
+  ws.send(JSON.stringify({ type: 'servo_jog_start', sign }));
+}
+
+function stopServoJog(sign) {
+  if (sign && servoJogSign !== sign) return;
+  if (servoJogSign === null) return;
+  servoJogSign = null;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: 'servo_jog_stop' }));
+}
+
+window.addEventListener('blur', () => stopServoJog());
+
+// ---- Teleop loop ----
+
+function computeCmdVel() {
+  let vx = 0, vy = 0, wz = 0;
+  for (const k of heldKeys) {
+    const c = KEY_MAP[k];
+    if (c) { vx += c.vx; vy += c.vy; wz += c.wz; }
+  }
+  const clamp = (v, hi) => Math.max(-hi, Math.min(hi, v));
+  return {
+    vx: clamp(vx * BASE_SPEED.vx * speedScale, BASE_SPEED.vx),
+    vy: clamp(vy * BASE_SPEED.vy * speedScale, BASE_SPEED.vy),
+    wz: clamp(wz * BASE_SPEED.wz * speedScale, BASE_SPEED.wz),
+  };
+}
+
+function startTeleopLoop() {
+  stopTeleopLoop();
+  teleopInterval = setInterval(() => {
+    if (heldKeys.size > 0 && !teleopBlocked() && ws && ws.readyState === WebSocket.OPEN) {
+      const { vx, vy, wz } = computeCmdVel();
+      ws.send(JSON.stringify({ type: 'cmd_vel', vx, vy, wz }));
+    }
+  }, 1000 / TELEOP_HZ);
+}
+
+function stopTeleopLoop() {
+  if (teleopInterval !== null) { clearInterval(teleopInterval); teleopInterval = null; }
+}
+
+function updateKeyDisplay() {
+  const ids = { q:'key-q', w:'key-w', e:'key-e', a:'key-a', s:'key-s', d:'key-d' };
+  for (const [k, id] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', heldKeys.has(k));
+  }
+}
+
+// ---- Deploy press-and-hold ----
+
+function deployStart() {
+  if (robotState === 'DEPLOYING') return;
+  deployStartTs = Date.now();
+  const progress = document.getElementById('deploy-progress');
+  const status = document.getElementById('deploy-status');
+  status.textContent = 'Hold for 3 seconds...';
+  progress.style.width = '0%';
+
+  deployTimer = setInterval(() => {
+    const elapsed = Date.now() - deployStartTs;
+    const pct = Math.min(100, (elapsed / DEPLOY_HOLD_MS) * 100);
+    progress.style.width = pct + '%';
+
+    if (elapsed >= DEPLOY_HOLD_MS) {
+      deployCancel();
+      deployExecute();
+    }
+  }, 50);
+}
+
+function deployCancel() {
+  if (deployTimer) {
+    clearInterval(deployTimer);
+    deployTimer = null;
+  }
+  const progress = document.getElementById('deploy-progress');
+  const status = document.getElementById('deploy-status');
+  progress.style.width = '0%';
+  if (robotState !== 'DEPLOYING') {
+    status.textContent = '';
+  }
+}
+
+function deployExecute() {
+  const btn = document.getElementById('deploy-btn');
+  const status = document.getElementById('deploy-status');
+  btn.classList.add('deploying');
+  btn.textContent = 'DEPLOYING...';
+  status.textContent = 'Homing arm — please wait...';
+  const progress = document.createElement('div');
+  progress.id = 'deploy-progress';
+  progress.style.width = '100%';
+  btn.appendChild(progress);
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'deploy' }));
+  }
+}
+
+// ---- State UI ----
+
+function applyStateUI() {
+  const overlay = document.getElementById('teleop-deploy-overlay');
+  const btn = document.getElementById('deploy-btn');
+  const status = document.getElementById('deploy-status');
+  const banner = document.getElementById('dev-banner');
+  const devBtn = document.getElementById('dev-toggle');
+  const stateLbl = document.getElementById('lbl-state');
+
+  if (devMode) {
+    banner.classList.add('active');
+    devBtn.classList.add('active');
+  } else {
+    banner.classList.remove('active');
+    devBtn.classList.remove('active');
+  }
+
+  if (stateLbl) stateLbl.textContent = robotState + (devMode ? ' DEV' : '');
+
+  if (robotState === 'ACTIVE') {
+    setDot('dot-state', 'green');
+  } else if (robotState === 'DEPLOYING') {
+    setDot('dot-state', 'orange');
+  } else {
+    setDot('dot-state', 'red');
+  }
+
+  if (robotState === 'ACTIVE' || devMode) {
+    overlay.classList.add('hidden');
+  } else if (robotState === 'DEPLOYING') {
+    overlay.classList.remove('hidden');
+    btn.classList.add('deploying');
+    btn.innerHTML = 'DEPLOYING...<div id="deploy-progress" style="width:100%"></div>';
+    status.textContent = 'Homing arm — please wait...';
+  } else {
+    overlay.classList.remove('hidden');
+    btn.classList.remove('deploying');
+    btn.innerHTML = 'DEPLOY<div id="deploy-progress"></div>';
+    status.textContent = '';
+  }
+}
+
+// ---- Arm calibration (2s hold) ----
+const CAL_ARM_HOLD_MS = 2000;
+let calArmInterval = null;
+let calArmStart_t = 0;
+
+function calArmStart() {
+  const btn = document.getElementById('cal-arm-btn');
+  const prog = document.getElementById('cal-arm-progress');
+  if (btn.disabled) return;
+  calArmStart_t = Date.now();
+  btn.classList.add('holding');
+  calArmInterval = setInterval(() => {
+    const pct = Math.min(100, ((Date.now() - calArmStart_t) / CAL_ARM_HOLD_MS) * 100);
+    prog.style.width = pct + '%';
+    if (pct >= 100) {
+      clearInterval(calArmInterval);
+      calArmInterval = null;
+      prog.style.width = '0%';
+      btn.classList.remove('holding');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'cal_arm' }));
+      }
+    }
+  }, 50);
+}
+
+function calArmCancel() {
+  if (calArmInterval) {
+    clearInterval(calArmInterval);
+    calArmInterval = null;
+  }
+  const btn = document.getElementById('cal-arm-btn');
+  const prog = document.getElementById('cal-arm-progress');
+  btn.classList.remove('holding');
+  prog.style.width = '0%';
+}
+
+// ---- Servo setup ----
+function servoSetupStart() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'cal_servo_start' }));
+  }
+  document.getElementById('servo-setup-controls').classList.add('visible');
+  document.getElementById('servo-setup-start-btn').style.display = 'none';
+}
+
+function servoSetupStop() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'cal_servo_stop' }));
+  }
+  document.getElementById('servo-setup-controls').classList.remove('visible');
+  document.getElementById('servo-setup-start-btn').style.display = '';
+}
+
+function calSavePose(index) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'cal_save_pose', index }));
+  }
+
+  const calAllowed = robotState === 'ACTIVE' || devMode;
+  document.querySelectorAll('.cal-btn').forEach(b => {
+    b.disabled = !calAllowed;
+  });
+}
+
+function calHome() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'cal_home' }));
+  }
+}
+
+function calStatus() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'cal_status' }));
+  }
+}
+
+function calSaveSteps() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'cal_save_steps' }));
+  }
+}
+
+// ---- Dev mode toggle ----
+
+function toggleDevMode() {
+  devMode = !devMode;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'dev_mode', active: devMode }));
+  }
+  applyStateUI();
+}
+
+// ---- LiDAR canvas auto-resize ----
+(function() {
+  const canvas = document.getElementById('lidar-canvas');
+  if (!canvas) return;
+  const ro = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const rect = entry.contentRect;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      renderLidarPlot();
+    }
+  });
+  ro.observe(canvas);
+})();
+
+connect();
+</script>
+</body>
+</html>

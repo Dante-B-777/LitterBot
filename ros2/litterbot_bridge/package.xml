@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+  package.xml — ROS2 package manifest for litterbot_bridge
+
+  This package contains nodes that bridge the ROS2 graph with the LitterBot
+  STM32 microcontroller over UART serial. It handles:
+    - Translating /cmd_vel (Twist) messages into the STM32 motor command
+      format: "M <fl> <fr> <rl> <rr>\n"
+    - Receiving encoder tick data from the STM32 and publishing /encoder_raw
+    - Applying mecanum wheel inverse kinematics
+
+  Dependencies:
+    - rclpy        : ROS2 Python client library
+    - geometry_msgs: Twist message for /cmd_vel
+    - std_msgs     : Int32MultiArray for /encoder_raw
+    - nav_msgs  : Odometry message for /odom (subscribed by ui_server)
+-->
+<package format="3">
+  <name>litterbot_bridge</name>
+  <version>0.1.0</version>
+  <description>
+    Bridge node between ROS2 and the LitterBot STM32 MCU over UART.
+    Converts /cmd_vel Twist commands to mecanum wheel motor percentages and
+    forwards them over serial. Publishes raw encoder ticks as /encoder_raw.
+  </description>
+
+  <maintainer email="benji@litterbot.local">Benji</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
